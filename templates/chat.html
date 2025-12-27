@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Chat</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<style>
+body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background: #f5f7fa;
+}
+
+h3 {
+    background: linear-gradient(135deg, #d32f2f, #1976d2);
+    color: white;
+    padding: 15px;
+    margin: 0;
+}
+
+a {
+    color: #1976d2;
+    text-decoration: none;
+}
+
+#chat {
+    height: calc(100vh - 220px);
+    padding: 15px;
+    overflow-y: auto;
+    background: white;
+}
+
+#chat p {
+    margin: 10px 0;
+    padding: 10px 14px;
+    background: #eef3ff;
+    border-radius: 12px;
+    max-width: 70%;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#chat b {
+    color: #d32f2f;
+}
+
+small {
+    display: block;
+    font-size: 11px;
+    color: #555;
+    margin-top: 5px;
+}
+
+input {
+    width: 75%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    outline: none;
+}
+
+button {
+    padding: 12px 18px;
+    border-radius: 10px;
+    border: none;
+    background: #1976d2;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+form {
+    padding: 10px;
+}
+.logout {
+    display: inline-block;
+    padding: 8px 16px;
+    margin-left: 10px;
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 15px rgba(211, 47, 47, 0.35);
+}
+
+.logout:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(211, 47, 47, 0.5);
+    opacity: 0.95;
+}
+
+.logout:active {
+    transform: scale(0.95);
+}
+
+</style>
+</head>
+
+<body>
+
+<h3>Welcome {{ user }}</h3>
+<a href="/logout" class="logout">Logout</a>
+
+<div id="chat">
+{% for m in messages %}
+<p>
+<b><a href="/profile/{{ m[0] }}">{{ m[0] }}</a></b>:
+{{ m[1] }}
+{% if m[2] %}
+<a href="/uploads/{{ m[2] }}">Download</a>
+{% endif %}
+<small>{{ m[3] }}</small>
+</p>
+{% endfor %}
+</div>
+
+<input id="msg" placeholder="Type message">
+<button onclick="send()">Send</button>
+
+<form action="/upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file">
+    <button>Upload</button>
+</form>
+
+<script>
+var socket = io();
+
+function send() {
+    let msg = document.getElementById("msg");
+    socket.emit("send_message", {user: "{{ user }}", message: msg.value});
+    msg.value = "";
+}
+
+document.getElementById("msg").addEventListener("keypress", function(e){
+    if(e.key === "Enter") send();
+});
+
+socket.on("receive_message", function(data){
+    let chat = document.getElementById("chat");
+    chat.innerHTML += `<p><b>${data.user}</b>: ${data.message || ""} <small>${data.timestamp}</small></p>`;
+    chat.scrollTop = chat.scrollHeight;
+});
+</script>
+
+</body>
+</html>
