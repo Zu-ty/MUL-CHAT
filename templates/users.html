@@ -32,7 +32,9 @@
                     {% if user['profile_pic'] %}
                         <img src="{{ url_for('uploaded_file', filename=user['profile_pic']) }}" class="user-avatar">
                     {% else %}
-                        <div class="user-avatar-letter">{{ user['username'][0].upper() }}</div>
+                        <div class="user-avatar-letter">
+                            {{ (user['username'] or user['email'] or '?')[0].upper() }}
+                        </div>
                     {% endif %}
                     <span class="user-name">{{ user['username'] if user['username'] else user['email'] }}</span>
                     <a href="{{ url_for('chat', chat_id='0') }}?user_id={{ user['id'] }}" class="chat-btn">Chat</a>
@@ -77,4 +79,4 @@
         window.onclick = (e) => { if(e.target == modal) modal.style.display='none'; }
     </script>
 </body>
-  </html>
+</html>
