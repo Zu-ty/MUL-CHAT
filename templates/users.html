@@ -33,19 +33,16 @@
                     {% if user['profile_pic'] %}
                         <img src="{{ url_for('uploaded_file', filename=user['profile_pic']) }}" class="user-avatar">
                     {% else %}
-                        <div class="user-avatar-letter">
-                            {{ (user['username'] or user['email'] or '?')[0].upper() }}
-                        </div>
+                        <div class="user-avatar-letter">{{ (user['username'] or user['email'] or '?')[0].upper() }}</div>
                     {% endif %}
                     <span class="user-name">{{ user['username'] if user['username'] else user['email'] }}</span>
-                    <!-- Temporary: personal chats use chat_id=0 for now -->
                     <a href="{{ url_for('chat', chat_id='0') }}?user_id={{ user['id'] }}" class="chat-btn">Chat</a>
                 </div>
             {% endfor %}
         </div>
 
         <!-- Group Chats -->
-        <h2>Groups / Chats</h2>
+        <h2>Group Chats</h2>
         <div class="chats-list">
             {% for chat in chats %}
                 <div class="chat-card">
@@ -82,7 +79,6 @@
     </main>
 
     <script>
-        // Floating modal logic
         const modal = document.getElementById('new-chat-modal');
         const btn = document.getElementById('new-chat-btn');
         const close = document.getElementById('close-modal');
