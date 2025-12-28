@@ -17,7 +17,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 DB_PATH = "chat.db"
 
-# --- DATABASE HELPER ---
+# --- DATABASE HELPERS ---
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -81,15 +81,13 @@ def login():
             cur.execute("SELECT * FROM users WHERE email=? AND password=?", (email, password))
             user = cur.fetchone()
             if user:
+                # Store minimal info in session
                 session['user_id'] = user['id']
-                session['email'] = user['email']
-                session['username'] = user['username'] if user['username'] else user['email']
-                session['description'] = user['description']
-                session['profile_pic'] = user['profile_pic']
                 return redirect(url_for("users"))
             else:
                 flash("Invalid credentials!", "error")
                 return redirect(url_for("login"))
+
     return render_template("login.html")
 
 @app.route("/logout")
@@ -113,36 +111,59 @@ def chat(chat_id):
         return redirect(url_for("login"))
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT messages.*, users.username, users.profile_pic FROM messages LEFT JOIN users ON messages.sender_id=users.id WHERE chat_id=? ORDER BY id ASC", (chat_id,))
+    cur.execute("""
+        SELECT messages.*, users.username, users.profile_pic 
+        FROM messages 
+        LEFT JOIN users ON messages.sender_id=users.id 
+        WHERE chat_id=? 
+        ORDER BY id ASC
+    """, (chat_id,))
     messages = cur.fetchall()
-    return render_template("chat.html", messages=messages, chat_id=chat_id)
+    
+    # Get chat name
+    cur.execute("SELECT chat_name FROM chats WHERE id=?", (chat_id,))
+    chat_row = cur.fetchone()
+    chat_name = chat_row['chat_name'] if chat_row else f"Chat {chat_id}"
+    
+    # Get current user info for Socket.IO
+    cur.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
+    current_user = cur.fetchone()
+    
+    return render_template("chat.html", messages=messages, chat_id=chat_id,
+                           current_user=current_user, chat_name=chat_name)
+
+# Redirect /chat to a default chat
+@app.route("/chat")
+def chat_redirect():
+    return redirect(url_for('chat', chat_id=0))
 
 @app.route("/profile", methods=["GET", "POST"])
 def profile():
     if "user_id" not in session:
         return redirect(url_for("login"))
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
+    user = cur.fetchone()
+
     if request.method == "POST":
         username = request.form.get("username")
         description = request.form.get("description")
         file = request.files.get("profile_pic")
-        filename = session.get("profile_pic")
+        filename = user['profile_pic']
 
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
 
-        conn = get_db()
-        cur = conn.cursor()
         cur.execute("UPDATE users SET username=?, description=?, profile_pic=? WHERE id=?",
                     (username, description, filename, session['user_id']))
         conn.commit()
-        session['username'] = username
-        session['description'] = description
-        session['profile_pic'] = filename
         flash("Profile updated successfully!", "success")
         return redirect(url_for("profile"))
 
-    return render_template("profile.html")
+    return render_template("profile.html", user=user)
 
 @app.route("/uploads/<filename>")
 def uploaded_file(filename):
@@ -154,38 +175,26 @@ def upload():
         return "", 401
     chat_id = request.form.get("chat_id")
     file = request.files.get("file")
-    filename = None
     if file:
         filename = secure_filename(file.filename)
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-        # Save file as a message
         conn = get_db()
         cur = conn.cursor()
         cur.execute("INSERT INTO messages (chat_id, sender_id, file_path, timestamp) VALUES (?,?,?,?)",
                     (chat_id, session['user_id'], filename, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
         conn.commit()
-
     return "OK"
-#
+
 @app.route("/new_chat", methods=["POST"])
 def new_chat():
     if "user_id" not in session:
         return redirect(url_for("login"))
 
     chat_name = request.form.get("chat_name")
-    user_ids = request.form.getlist("user_ids")  # list of selected users
-
     conn = get_db()
     cur = conn.cursor()
     cur.execute("INSERT INTO chats (chat_name) VALUES (?)", (chat_name,))
     chat_id = cur.lastrowid
-
-    # Optionally add initial participants
-    for uid in user_ids:
-        # store participants in a separate table if needed
-        pass
-
     conn.commit()
     return redirect(url_for("chat", chat_id=chat_id))
 
@@ -199,18 +208,20 @@ def on_join(data):
 def handle_message(data):
     chat_id = data['chat_id']
     content = data['content']
+    user_id = data.get('user_id', session['user_id'])
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("INSERT INTO messages (chat_id, sender_id, content, timestamp) VALUES (?,?,?,?)",
-                (chat_id, session['user_id'], content, timestamp))
+                (chat_id, user_id, content, timestamp))
     conn.commit()
 
-    cur.execute("SELECT username, profile_pic FROM users WHERE id=?", (session['user_id'],))
+    cur.execute("SELECT username, profile_pic, email FROM users WHERE id=?", (user_id,))
     user = cur.fetchone()
 
     emit('receive_message', {
-        "sender": user['username'] if user['username'] else session['email'],
+        "sender": user['username'] if user['username'] else user['email'],
         "profile_pic": user['profile_pic'],
         "content": content,
         "file_path": None,
