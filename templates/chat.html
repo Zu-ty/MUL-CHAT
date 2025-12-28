@@ -17,7 +17,7 @@
           {% if session.get('profile_pic') %}
             <img src="{{ url_for('uploaded_file', filename=session['profile_pic']) }}" alt="Profile Pic">
           {% else %}
-            <span>{{ session['username'][0].upper() }}</span>
+            <span>{{ (session['username'] or '?')[0].upper() }}</span>
           {% endif %}
         </div>
         <span class="username">{{ session['username'] }}</span>
@@ -34,11 +34,11 @@
           {% if msg['profile_pic'] %}
             <img src="{{ url_for('uploaded_file', filename=msg['profile_pic']) }}" alt="Profile Pic">
           {% else %}
-            <span>{{ msg['username'][0].upper() }}</span>
+            <span>{{ (msg['username'] or msg['email'] or '?')[0].upper() }}</span>
           {% endif %}
         </div>
         <div class="message-content">
-          <span class="sender-name">{{ msg['username'] }}</span>
+          <span class="sender-name">{{ msg['username'] or msg['email'] or '?' }}</span>
           {% if msg['content'] %}
             <p>{{ msg['content'] }}</p>
           {% endif %}
@@ -104,12 +104,12 @@
       if (data.profile_pic) {
         avatarDiv.innerHTML = `<img src="/uploads/${data.profile_pic}" alt="Profile Pic">`;
       } else {
-        avatarDiv.innerHTML = `<span>${data.sender[0].toUpperCase()}</span>`;
+        avatarDiv.innerHTML = `<span>${(data.sender || '?')[0].toUpperCase()}</span>`;
       }
 
       const contentDiv = document.createElement('div');
       contentDiv.classList.add('message-content');
-      let html = `<span class="sender-name">${data.sender}</span>`;
+      let html = `<span class="sender-name">${data.sender || '?'}</span>`;
       if (data.content) html += `<p>${data.content}</p>`;
       if (data.file_path) html += `<a href="/uploads/${data.file_path}" target="_blank" class="file-link">${data.file_path}</a>`;
       html += `<span class="timestamp">${data.timestamp}</span>`;
