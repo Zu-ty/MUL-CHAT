@@ -167,7 +167,7 @@ def upload():
         conn.commit()
 
     return "OK"
-//
+#
 @app.route("/new_chat", methods=["POST"])
 def new_chat():
     if "user_id" not in session:
