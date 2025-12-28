@@ -8,6 +8,9 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, join_room, emit
 from datetime import datetime
+from zoneinfo import ZoneInfo
+tz = ZoneInfo("Africa/Lagos")  # or your local timezone
+timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
 # --- CONFIG ---
 app = Flask(__name__)
