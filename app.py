@@ -167,6 +167,27 @@ def upload():
         conn.commit()
 
     return "OK"
+//
+@app.route("/new_chat", methods=["POST"])
+def new_chat():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    chat_name = request.form.get("chat_name")
+    user_ids = request.form.getlist("user_ids")  # list of selected users
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO chats (chat_name) VALUES (?)", (chat_name,))
+    chat_id = cur.lastrowid
+
+    # Optionally add initial participants
+    for uid in user_ids:
+        # store participants in a separate table if needed
+        pass
+
+    conn.commit()
+    return redirect(url_for("chat", chat_id=chat_id))
 
 # --- SOCKET.IO ---
 @socketio.on('join')
