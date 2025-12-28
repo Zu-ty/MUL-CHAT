@@ -8,7 +8,7 @@
 </head>
 <body>
     <header class="header">
-        <img src="{{ url_for('static', filename='images.jpeg') }}" alt="Banner" class="header-img">
+        <img src="{{ url_for('static', filename='img/header-banner.png') }}" alt="Banner" class="header-img">
         <div class="profile-container">
             {% if session.get('username') %}
                 <div class="avatar">
@@ -25,29 +25,30 @@
     </header>
 
     <main>
-        <!-- Personal Users -->
-        <h2>Users Available</h2>
+        <h2>Chats</h2>
+        <div class="chats-list">
+            {% for chat in chats %}
+                <div class="chat-card">
+                    <span class="chat-name">{{ chat['chat_name'] or 'Unnamed Chat' }}</span>
+                    <a href="{{ url_for('chat', chat_id=chat['id']) }}" class="chat-btn">Open</a>
+                </div>
+            {% endfor %}
+        </div>
+
+        <h2>Start Personal Chat</h2>
         <div class="users-list">
             {% for user in users %}
                 <div class="user-card">
                     {% if user['profile_pic'] %}
                         <img src="{{ url_for('uploaded_file', filename=user['profile_pic']) }}" class="user-avatar">
                     {% else %}
-                        <div class="user-avatar-letter">{{ (user['username'] or user['email'] or '?')[0].upper() }}</div>
+                        <div class="user-avatar-letter">
+                            {{ (user['username'] or user['email'] or '?')[0].upper() }}
+                        </div>
                     {% endif %}
                     <span class="user-name">{{ user['username'] if user['username'] else user['email'] }}</span>
-                    <a href="{{ url_for('chat', chat_id='0') }}?user_id={{ user['id'] }}" class="chat-btn">Chat</a>
-                </div>
-            {% endfor %}
-        </div>
-
-        <!-- Group Chats -->
-        <h2>Group Chats</h2>
-        <div class="chats-list">
-            {% for chat in chats %}
-                <div class="chat-card">
-                    <span class="chat-name">{{ chat['chat_name'] or 'Chat ' ~ chat['id'] }}</span>
-                    <a href="{{ url_for('chat', chat_id=chat['id']) }}" class="chat-btn">Open</a>
+                    <!-- Link to open or create personal chat -->
+                    <a href="{{ url_for('new_chat') }}?user_id={{ user['id'] }}" class="chat-btn">Chat</a>
                 </div>
             {% endfor %}
         </div>
@@ -61,7 +62,7 @@
                 <span class="close-btn" id="close-modal">&times;</span>
                 <h3>Create Group Chat</h3>
                 <form method="POST" action="{{ url_for('new_chat') }}">
-                    <label>Chat Name (Optional)</label>
+                    <label>Group Name</label>
                     <input type="text" name="chat_name" placeholder="Group Name">
                     <label>Select Users</label>
                     <div class="users-checkbox">
@@ -79,6 +80,7 @@
     </main>
 
     <script>
+        // Floating modal logic
         const modal = document.getElementById('new-chat-modal');
         const btn = document.getElementById('new-chat-btn');
         const close = document.getElementById('close-modal');
