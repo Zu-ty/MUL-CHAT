@@ -1,0 +1,128 @@
+/* Basic reset */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Body and container */
+body {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #ff4b5c, #1e90ff);
+}
+
+.container {
+    background-color: white;
+    width: 90%;
+    max-width: 400px;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+/* Header */
+.mul-connect {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ff4b5c;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+}
+
+/* Flash messages */
+.flash-container {
+    margin-bottom: 15px;
+}
+
+.flash {
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.flash.success {
+    background-color: #1e90ff;
+    color: white;
+}
+
+.flash.error {
+    background-color: #ff4b5c;
+    color: white;
+}
+
+/* Tabs */
+.tab-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.tab-label {
+    text-align: center;
+    background-color: #ff4b5c;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 5px;
+    transition: background 0.3s;
+}
+
+.tab-label:hover {
+    background-color: #1e90ff;
+}
+
+input[name="tab"] {
+    display: none;
+}
+
+/* Forms */
+.form-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+input[type="email"], input[type="password"] {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+}
+
+button {
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background-color: #1e90ff;
+    color: white;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #ff4b5c;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .container {
+        padding: 20px;
+    }
+    .mul-connect {
+        font-size: 1.5rem;
+    }
+  }
