@@ -9,10 +9,10 @@ from werkzeug.utils import secure_filename
 from flask_socketio import SocketIO, join_room, emit
 from datetime import datetime
 from zoneinfo import ZoneInfo
-tz = ZoneInfo("Africa/Lagos")  # or your local timezone
-timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
 # --- CONFIG ---
+tz = ZoneInfo("Africa/Lagos")  # timezone
+
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 socketio = SocketIO(app)
@@ -72,7 +72,6 @@ def init_db():
 init_db()
 
 # --- ROUTES ---
-
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -119,11 +118,9 @@ def users():
     conn = get_db()
     cur = conn.cursor()
 
-    # All other users for personal chats
     cur.execute("SELECT * FROM users WHERE id != ?", (session['user_id'],))
     users_list = cur.fetchall()
 
-    # All chats where the user is a member
     cur.execute("""
         SELECT chats.* FROM chats
         JOIN chat_members ON chats.id = chat_members.chat_id
@@ -141,7 +138,6 @@ def chat(chat_id):
     conn = get_db()
     cur = conn.cursor()
 
-    # Get messages for this chat
     cur.execute("""
         SELECT messages.*, users.username, users.profile_pic
         FROM messages
@@ -151,12 +147,10 @@ def chat(chat_id):
     """, (chat_id,))
     messages = cur.fetchall()
 
-    # Get chat name
     cur.execute("SELECT chat_name FROM chats WHERE id=?", (chat_id,))
     chat_row = cur.fetchone()
     chat_name = chat_row['chat_name'] if chat_row else f"Chat {chat_id}"
 
-    # Get current user info
     cur.execute("SELECT * FROM users WHERE id=?", (session['user_id'],))
     current_user = cur.fetchone()
 
@@ -191,6 +185,11 @@ def profile():
         cur.execute("UPDATE users SET username=?, description=?, profile_pic=? WHERE id=?",
                     (username, description, filename, session['user_id']))
         conn.commit()
+
+        # Update session values to persist profile info
+        session['username'] = username
+        session['profile_pic'] = filename
+
         flash("Profile updated successfully!", "success")
         return redirect(url_for("profile"))
 
@@ -213,8 +212,9 @@ def upload():
         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         conn = get_db()
         cur = conn.cursor()
+        timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
         cur.execute("INSERT INTO messages (chat_id, sender_id, file_path, timestamp) VALUES (?,?,?,?)",
-                    (chat_id, session['user_id'], filename, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+                    (chat_id, session['user_id'], filename, timestamp))
         conn.commit()
     return "OK"
 
@@ -227,10 +227,8 @@ def new_chat():
     conn = get_db()
     cur = conn.cursor()
 
-    # Handle creating a 1-on-1 personal chat
     user_id = request.args.get("user_id")
     if user_id:
-        # Check if personal chat between these two exists
         cur.execute("""
             SELECT chats.id FROM chats
             JOIN chat_members cm1 ON chats.id = cm1.chat_id AND cm1.user_id = ?
@@ -240,24 +238,19 @@ def new_chat():
         chat = cur.fetchone()
         if chat:
             return redirect(url_for("chat", chat_id=chat['id']))
-        # Create new personal chat
         cur.execute("INSERT INTO chats (chat_name, is_group) VALUES (?,0)", ("",))
         chat_id = cur.lastrowid
-        # Add members
         cur.execute("INSERT INTO chat_members (chat_id, user_id) VALUES (?,?)", (chat_id, session['user_id']))
         cur.execute("INSERT INTO chat_members (chat_id, user_id) VALUES (?,?)", (chat_id, user_id))
         conn.commit()
         return redirect(url_for("chat", chat_id=chat_id))
 
-    # Handle creating a group chat
     if request.method == "POST":
         chat_name = request.form.get("chat_name") or "Group Chat"
         user_ids = request.form.getlist("user_ids")
         cur.execute("INSERT INTO chats (chat_name, is_group) VALUES (?,1)", (chat_name,))
         chat_id = cur.lastrowid
-        # Add creator
         cur.execute("INSERT INTO chat_members (chat_id, user_id) VALUES (?,?)", (chat_id, session['user_id']))
-        # Add selected users
         for uid in user_ids:
             cur.execute("INSERT INTO chat_members (chat_id, user_id) VALUES (?,?)", (chat_id, uid))
         conn.commit()
@@ -265,18 +258,20 @@ def new_chat():
 
     return redirect(url_for("users"))
 
+
 # --- SOCKET.IO ---
 @socketio.on('join')
 def on_join(data):
     room = data['chat_id']
     join_room(room)
 
+
 @socketio.on('send_message')
 def handle_message(data):
     chat_id = data['chat_id']
     content = data['content']
     user_id = data.get('user_id', session['user_id'])
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
     conn = get_db()
     cur = conn.cursor()
@@ -294,6 +289,7 @@ def handle_message(data):
         "file_path": None,
         "timestamp": timestamp
     }, room=chat_id)
+
 
 # --- RUN APP ---
 if __name__ == "__main__":
