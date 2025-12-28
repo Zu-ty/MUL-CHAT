@@ -1,3 +1,8 @@
+
+# --- MONKEY PATCH FOR EVENTLET ---
+import eventlet
+eventlet.monkey_patch()
+# --- IMPORTS AFTER MONKEY PATCH ---
 import os
 import sqlite3
 from flask import Flask, render_template, request, redirect, url_for, session, send_from_directory, flash
