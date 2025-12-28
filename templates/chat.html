@@ -17,7 +17,7 @@
           {% if session.get('profile_pic') %}
             <img src="{{ url_for('uploaded_file', filename=session['profile_pic']) }}" alt="Profile Pic">
           {% else %}
-            <span>{{ (session['username'] or '?')[0].upper() }}</span>
+            <span>{{ session['username'][0].upper() }}</span>
           {% endif %}
         </div>
         <span class="username">{{ session['username'] }}</span>
@@ -34,11 +34,11 @@
           {% if msg['profile_pic'] %}
             <img src="{{ url_for('uploaded_file', filename=msg['profile_pic']) }}" alt="Profile Pic">
           {% else %}
-            <span>{{ (msg['username'] or msg['email'] or '?')[0].upper() }}</span>
+            <span>{{ (msg['username'] or '?')[0].upper() }}</span>
           {% endif %}
         </div>
         <div class="message-content">
-          <span class="sender-name">{{ msg['username'] or msg['email'] or '?' }}</span>
+          <span class="sender-name">{{ msg['username'] if msg['username'] else 'Unknown' }}</span>
           {% if msg['content'] %}
             <p>{{ msg['content'] }}</p>
           {% endif %}
@@ -70,6 +70,9 @@
     const chatMain = document.getElementById('chat-main');
     const fileInput = document.getElementById('file-input');
 
+    // Scroll to bottom initially
+    chatMain.scrollTop = chatMain.scrollHeight;
+
     // Handle message submission
     chatForm.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -82,10 +85,11 @@
       if (file) formData.append('file', file);
 
       // Send file to backend
-      fetch('/upload', { method: 'POST', body: formData }).then(() => {
-        messageInput.value = '';
-        fileInput.value = '';
-      });
+      if(file){
+        fetch('/upload', { method: 'POST', body: formData }).then(() => {
+          fileInput.value = '';
+        });
+      }
 
       // Send text message via Socket.IO
       if (content) {
@@ -109,7 +113,7 @@
 
       const contentDiv = document.createElement('div');
       contentDiv.classList.add('message-content');
-      let html = `<span class="sender-name">${data.sender || '?'}</span>`;
+      let html = `<span class="sender-name">${data.sender || 'Unknown'}</span>`;
       if (data.content) html += `<p>${data.content}</p>`;
       if (data.file_path) html += `<a href="/uploads/${data.file_path}" target="_blank" class="file-link">${data.file_path}</a>`;
       html += `<span class="timestamp">${data.timestamp}</span>`;
