@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
 </head>
 <body>
+
   <!-- Header -->
   <header class="chat-header">
     <img src="{{ url_for('static', filename='images.jpeg') }}" alt="Banner" class="header-img">
@@ -32,18 +33,20 @@
       <div class="message">
         <div class="sender-avatar">
           {% if msg['profile_pic'] %}
-            <img src="{{ url_for('uploaded_file', filename=msg['profile_pic']) }}" alt="Profile Pic">
+            <img src="{{ url_for('uploaded_file', filename=msg['profile_pic']) }}">
           {% else %}
             <span>{{ (msg['username'] or '?')[0].upper() }}</span>
           {% endif %}
         </div>
         <div class="message-content">
-          <span class="sender-name">{{ msg['username'] if msg['username'] else 'Unknown' }}</span>
+          <span class="sender-name">{{ msg['username'] or 'Unknown' }}</span>
           {% if msg['content'] %}
             <p>{{ msg['content'] }}</p>
           {% endif %}
           {% if msg['file_path'] %}
-            <a href="{{ url_for('uploaded_file', filename=msg['file_path']) }}" target="_blank" class="file-link">{{ msg['file_path'] }}</a>
+            <a href="{{ url_for('uploaded_file', filename=msg['file_path']) }}" target="_blank" class="file-link">
+              {{ msg['file_path'] }}
+            </a>
           {% endif %}
           <span class="timestamp">{{ msg['timestamp'] }}</span>
         </div>
@@ -59,23 +62,32 @@
   </form>
 
   <script>
-    const socket = io();
+    /* 🔥 SOCKET FIX STARTS HERE */
+    const socket = io({
+      transports: ["websocket"],
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+
     const chatId = "{{ chat_id }}";
 
-    // Join the room
-    socket.emit('join', { chat_id: chatId });
+    // Always rejoin room after reconnect (Render sleep fix)
+    socket.on("connect", () => {
+      socket.emit("join", { chat_id: chatId });
+    });
+    /* 🔥 SOCKET FIX ENDS HERE */
 
     const chatForm = document.getElementById('chat-form');
     const messageInput = document.getElementById('message-input');
     const chatMain = document.getElementById('chat-main');
     const fileInput = document.getElementById('file-input');
 
-    // Scroll to bottom initially
     chatMain.scrollTop = chatMain.scrollHeight;
 
-    // Handle message submission
     chatForm.addEventListener('submit', function(e) {
       e.preventDefault();
+
       const content = messageInput.value.trim();
       const file = fileInput.files[0];
       if (!content && !file) return;
@@ -84,50 +96,41 @@
       formData.append('chat_id', chatId);
       if (file) formData.append('file', file);
 
-      // Send file to backend
-      if(file){
-        fetch('/upload', { method: 'POST', body: formData }).then(() => {
-          fileInput.value = '';
-        });
+      if (file) {
+        fetch('/upload', { method: 'POST', body: formData })
+          .then(() => fileInput.value = '');
       }
 
-      // Send text message via Socket.IO
       if (content) {
-        socket.emit('send_message', { chat_id: chatId, content: content });
+        socket.emit('send_message', { chat_id: chatId, content });
         messageInput.value = '';
       }
     });
 
-    // Receive messages
     socket.on('receive_message', function(data) {
       const msgDiv = document.createElement('div');
-      msgDiv.classList.add('message');
+      msgDiv.className = 'message';
 
       const avatarDiv = document.createElement('div');
-      avatarDiv.classList.add('sender-avatar');
-      if (data.profile_pic) {
-        avatarDiv.innerHTML = `<img src="/uploads/${data.profile_pic}" alt="Profile Pic">`;
-      } else {
-        avatarDiv.innerHTML = `<span>${(data.sender || '?')[0].toUpperCase()}</span>`;
-      }
+      avatarDiv.className = 'sender-avatar';
+      avatarDiv.innerHTML = data.profile_pic
+        ? `<img src="/uploads/${data.profile_pic}">`
+        : `<span>${(data.sender || '?')[0].toUpperCase()}</span>`;
 
       const contentDiv = document.createElement('div');
-      contentDiv.classList.add('message-content');
-      let html = `<span class="sender-name">${data.sender || 'Unknown'}</span>`;
-      if (data.content) html += `<p>${data.content}</p>`;
-      if (data.file_path) html += `<a href="/uploads/${data.file_path}" target="_blank" class="file-link">${data.file_path}</a>`;
-      html += `<span class="timestamp">${data.timestamp}</span>`;
-      contentDiv.innerHTML = html;
+      contentDiv.className = 'message-content';
+      contentDiv.innerHTML = `
+        <span class="sender-name">${data.sender || 'Unknown'}</span>
+        ${data.content ? `<p>${data.content}</p>` : ''}
+        <span class="timestamp">${data.timestamp}</span>
+      `;
 
       msgDiv.appendChild(avatarDiv);
       msgDiv.appendChild(contentDiv);
       chatMain.appendChild(msgDiv);
-
-      // Scroll to bottom
       chatMain.scrollTop = chatMain.scrollHeight;
     });
 
-    // Enter key to send message
     messageInput.addEventListener('keydown', function(e) {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -135,5 +138,6 @@
       }
     });
   </script>
+
 </body>
 </html>
