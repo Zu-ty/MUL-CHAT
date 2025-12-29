@@ -53,30 +53,43 @@
             {% endfor %}
         </div>
 
-        <!-- Floating ➕ button -->
-        <div class="floating-btn" id="new-chat-btn">+</div>
+      <!-- Floating ➕ button -->
+<div class="floating-btn" id="new-chat-btn">+</div>
 
-        <!-- New Chat / Group Modal -->
-        <div class="modal" id="new-chat-modal">
-            <div class="modal-content">
-                <span class="close-btn" id="close-modal">&times;</span>
-                <h3>Create Group Chat</h3>
-                <form method="POST" action="{{ url_for('new_chat') }}">
-                    <label>Group Name</label>
-                    <input type="text" name="chat_name" placeholder="Group Name">
-                    <label>Select Users</label>
-                    <div class="users-checkbox">
-                        {% for user in users %}
-                            <label>
-                                <input type="checkbox" name="user_ids" value="{{ user['id'] }}">
-                                {{ user['username'] if user['username'] else user['email'] }}
-                            </label>
-                        {% endfor %}
-                    </div>
-                    <button type="submit">Create</button>
-                </form>
-            </div>
+<!-- New Chat / Group Modal -->
+<div class="modal" id="new-chat-modal">
+  <div class="modal-content">
+    <span class="close-btn" id="close-modal">&times;</span>
+
+    <h3>Create New Chat</h3>
+
+    <form method="POST" action="{{ url_for('new_chat') }}">
+      <div class="form-group">
+        <label>Group Name (optional)</label>
+        <input type="text" name="chat_name" placeholder="e.g. Project Team">
+      </div>
+
+      <div class="form-group">
+        <label>Select Users</label>
+        <div class="users-checkbox">
+          {% for user in users %}
+            <label class="user-check">
+              <input type="checkbox" name="user_ids" value="{{ user['id'] }}">
+              <span class="check-avatar">
+                {{ (user['username'] or user['email'])[0].upper() }}
+              </span>
+              <span class="check-name">
+                {{ user['username'] if user['username'] else user['email'] }}
+              </span>
+            </label>
+          {% endfor %}
         </div>
+      </div>
+
+      <button type="submit" class="primary-btn">Create Chat</button>
+    </form>
+  </div>
+</div>
     </main>
 
     <script>
